@@ -1,5 +1,4 @@
 
-
 // Connect to db
 var db = require('mongoose');
 db.connect(process.env.DB_URI);
