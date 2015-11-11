@@ -8,4 +8,10 @@ var NoteSchema = db.Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
+// Will run the function before every save
+NoteSchema.pre('save', function(next) {
+  this.updated_at = new Date();
+  next();
+});
+
 module.exports = NoteSchema;
