@@ -1,5 +1,5 @@
 (function() {
-  
+
   angular.module('notely.notes', [
     'ui.router',
     'textAngular'
@@ -44,13 +44,17 @@
 
         $scope.save = function() {
           // Decide if we need to call create or update
+          console.log('NotesController.save');
           if ($scope.note._id) {
             NotesService.update($scope.note).then(function(response) {
+              debugger;
               $scope.note = angular.copy(response.data.note);
             });
           }
           else {
             NotesService.create($scope.note, function(response) {
+              debugger;
+              
               $state.go('notes.form', { noteId: response.data.note._id })
               });
           }

@@ -47,7 +47,9 @@ function NotesService($http, API_BASE) {
     };
 */
     self.create = function(note, callback) {
-      var noteCreatePromise = $http.post(API_BASE,
+      console.log('self.update');
+
+      var noteCreatePromise = $http.post(API_BASE + `notes`,
         { note: note }
       );
       noteCreatePromise.then(function(response) {
@@ -59,7 +61,7 @@ function NotesService($http, API_BASE) {
 
     self.update = function(note) {
       console.log('self.update');
-      var noteUpdatePromise = $http.put(API_BASE + note._id,
+      var noteUpdatePromise = $http.put(API_BASE + `notes/` + note._id,
         {
           note: {
                   title: note.title,
@@ -69,7 +71,7 @@ function NotesService($http, API_BASE) {
         //self.notes.unshift(response.data.note);
       );
       noteUpdatePromise.then(function(response) {
-        console.log('self.update success')
+        console.log('self.update success');
         self.replaceNote(response.data.note);
       });
       return noteUpdatePromise;
@@ -84,7 +86,7 @@ function NotesService($http, API_BASE) {
     };
 
     self.delete = function(note) {
-      var noteDeletePromise = $http.delete(API_BASE + note._id);
+      var noteDeletePromise = $http.delete(API_BASE + `notes/` + note._id);
       noteDeletePromise.then(function(response) {
         self.remove(response.data.note);
       });
