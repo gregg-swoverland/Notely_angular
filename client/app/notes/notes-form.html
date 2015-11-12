@@ -1,0 +1,22 @@
+<form ng-submit="save()">
+  <p>
+  <input type="text" name="title" placeholder="Title your note, pls." id="note_title" ng-model='note.title'>
+  </p>
+  <p>
+    <text-angular
+  name="body_html"
+  placeholder="Just start typing..."
+  ta-toolbar="[
+    ['bold', 'italics', 'underline'],
+    ['ul', 'ol', 'indent', 'outdent'],
+    ['html'],
+    ['insertLink']]"
+  ng-model="note.body_html"></text-angular>
+  </p>
+  <div class="form-actions" ng-model='buttonText'>
+    <input type="submit" name="commit" value="{{ buttonText() }}" class="btn btn-primary">
+    <a ng-click="delete()" class="btn">
+      <i class="fa fa-trash-o"></i>
+    </a>
+  </div>
+</form>
