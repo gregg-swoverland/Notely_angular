@@ -14,38 +14,6 @@
 })();
 'use strict';
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-angular.module('notely').directive('signUp', ['UsersService', function (UsersService) {
-  var SignUpController = (function () {
-    function SignUpController() {
-      _classCallCheck(this, SignUpController);
-
-      this.user = {};
-    }
-
-    _createClass(SignUpController, [{
-      key: 'submit',
-      value: function submit() {
-        UsersService.create(this.user);
-      }
-    }]);
-
-    return SignUpController;
-  })();
-
-  return {
-    scope: {},
-    controller: SignUpController,
-    controllerAs: 'ctrl',
-    bindToController: true,
-    templateUrl: '/components/sign-up.html'
-  };
-}]);
-'use strict';
-
 (function () {
 
   angular.module('notely.notes', ['ui.router', 'textAngular']).config(notesConfig);
@@ -58,12 +26,25 @@ angular.module('notely').directive('signUp', ['UsersService', function (UsersSer
     .state('notes', {
       url: '/notes',
       resolve: {
-        // see https://github.com/angular-ui/ui-router/wiki
-        notesLoaded: ['NotesService', function (NotesService) {
-          return NotesService.fetch();
+        notesLoaded: ['$state', '$q', '$timeout', 'NotesService', 'CurrentUser', function ($state, $q, $timeout, NotesService, CurrentUser) {
+          var deferred = $q.defer();
+          $timeout(function () {
+            if (CurrentUser.isSignedIn()) {
+              NotesService.fetch().then(function () {
+                deferred.resolve();
+              }, function () {
+                deferred.reject();
+                $state.go('sign-in');
+              });
+            } else {
+              deferred.reject();
+              $state.go('sign-in');
+            }
+          });
+          return deferred.promise;
         }]
       },
-      templateUrl: '/notes/notes.html', // inserted wherever UI directive <UI-veiw> is located
+      templateUrl: '/notes/notes.html',
       controller: NotesController
     }).state('notes.form', { // make this a child state of notes using .form
       url: '/:noteId',
@@ -113,18 +94,6 @@ angular.module('notely').directive('signUp', ['UsersService', function (UsersSer
       }
       return 'Save';
     };
-  };
-})();
-'use strict';
-
-(function () {
-  angular.module('notely').config(usersConfig);
-  usersConfig.$inject = ['$stateProvider'];
-  function usersConfig($stateProvider) {
-    $stateProvider.state('sign-up', {
-      url: '/sign-up',
-      template: '<sign-up></sign-up>'
-    });
   };
 })();
 'use strict';
@@ -212,6 +181,11 @@ angular.module('notely').service('CurrentUser', ['$window', function ($window) {
       value: function clear() {
         this.currentUser = undefined;
         $window.localStorage.removeItem('currentUser');
+      }
+    }, {
+      key: 'isSignedIn',
+      value: function isSignedIn() {
+        return !!this.get()._id;
       }
     }]);
 
@@ -344,6 +318,18 @@ angular.module('notely').service('UsersService', ['$http', 'API_BASE', 'AuthToke
         });
         return userPromise;
       }
+    }, {
+      key: 'login',
+      value: function login(user) {
+        var loginPromise = $http.post(API_BASE + 'sessions', {
+          user: user
+        });
+        loginPromise.then(function (response) {
+          AuthToken.set(response.data.auth_token);
+          CurrentUser.set(response.data.user);
+        });
+        return loginPromise;
+      }
     }]);
 
     return UsersService;
@@ -351,4 +337,136 @@ angular.module('notely').service('UsersService', ['$http', 'API_BASE', 'AuthToke
 
   return new UsersService();
 }]);
+'use strict';
+
+(function () {
+  angular.module('notely').config(usersConfig);
+
+  usersConfig.$inject = ['$stateProvider'];
+  function usersConfig($stateProvider) {
+    $stateProvider.state('sign-up', {
+      url: '/sign-up',
+      template: '<sign-up></sign-up>'
+    }).state('sign-in', {
+      url: '/sign-in',
+      template: '<sign-in></sign-in>'
+    });
+  };
+})();
+'use strict';
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+angular.module('notely').directive('signIn', ['$state', 'UsersService', function ($state, UsersService) {
+  var SignInController = (function () {
+    function SignInController() {
+      _classCallCheck(this, SignInController);
+
+      this.user = {};
+    }
+
+    _createClass(SignInController, [{
+      key: 'login',
+      value: function login() {
+        UsersService.login(this.user).then(function (response) {
+          $state.go('notes.form', { noteId: undefined });
+        });
+      }
+    }]);
+
+    return SignInController;
+  })();
+
+  return {
+    scope: {},
+    controller: SignInController,
+    controllerAs: 'ctrl',
+    bindToController: true,
+    templateUrl: '/components/sign-in.html'
+  };
+}]);
+'use strict';
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+angular.module('notely').directive('signUp', ['$state', 'UsersService', function ($state, UsersService) {
+  var SignUpController = (function () {
+    function SignUpController() {
+      _classCallCheck(this, SignUpController);
+
+      this.user = {};
+    }
+
+    _createClass(SignUpController, [{
+      key: 'submit',
+      value: function submit() {
+        UsersService.create(this.user).then(function (response) {
+          $state.go('notes.form', { noteId: undefined });
+        });
+      }
+    }]);
+
+    return SignUpController;
+  })();
+
+  return {
+    scope: {},
+    controller: SignUpController,
+    controllerAs: 'ctrl',
+    bindToController: true,
+    templateUrl: '/components/sign-up.html'
+  };
+}]);
+'use strict';
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+angular.module('notely').directive('userLinks', function () {
+  var UserLinksController = (function () {
+    function UserLinksController($state, CurrentUser, AuthToken) {
+      _classCallCheck(this, UserLinksController);
+
+      this.$state = $state;
+      this.CurrentUser = CurrentUser;
+      this.AuthToken = AuthToken;
+    }
+
+    _createClass(UserLinksController, [{
+      key: 'user',
+      value: function user() {
+        return this.CurrentUser.get();
+      }
+    }, {
+      key: 'signedIn',
+      value: function signedIn() {
+        return !!this.user()._id;
+      }
+    }, {
+      key: 'logout',
+      value: function logout() {
+        this.CurrentUser.clear();
+        this.AuthToken.clear();
+        this.$state.go('sign-in');
+      }
+    }]);
+
+    return UserLinksController;
+  })();
+
+  UserLinksController.$inject = ['$state', 'CurrentUser', 'AuthToken'];
+
+  return {
+    scope: {},
+    controller: UserLinksController,
+    controllerAs: 'ctrl',
+    bindToController: true,
+    template: '\n      <div class="user-links">\n        <div ng-show="ctrl.signedIn()">\n          Signed in as {{ ctrl.user().name }}\n          |\n          <a href="#" ng-click="ctrl.logout()">Logout</a>\n        </div>\n      </div>\n    '
+  };
+});
 //# sourceMappingURL=bundle.js.map

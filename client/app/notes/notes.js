@@ -12,16 +12,39 @@
       // each url is a state
 
       .state('notes', {
-        url: '/notes',
-        resolve: {
-          // see https://github.com/angular-ui/ui-router/wiki
-          notesLoaded: ['NotesService', function(NotesService) {
-            return NotesService.fetch();
-          }]
-        },
-        templateUrl: '/notes/notes.html', // inserted wherever UI directive <UI-veiw> is located
-        controller: NotesController
-      })
+  url: '/notes',
+  resolve: {
+    notesLoaded: [
+      '$state',
+      '$q',
+      '$timeout',
+      'NotesService',
+      'CurrentUser',
+      function($state, $q, $timeout, NotesService , CurrentUser) {
+        let deferred = $q.defer();
+        $timeout(function() {
+          if (CurrentUser.isSignedIn()) {
+            NotesService.fetch().then(
+              function() {
+                deferred.resolve();
+              },
+              function() {
+                deferred.reject();
+                $state.go('sign-in');
+              }
+            );
+          }
+          else {
+            deferred.reject();
+            $state.go('sign-in');
+          }
+        });
+        return deferred.promise;
+      }]
+  },
+  templateUrl: '/notes/notes.html',
+  controller: NotesController
+})
 
       .state('notes.form', {  // make this a child state of notes using .form
         url: '/:noteId',
@@ -54,7 +77,7 @@
           else {
             NotesService.create($scope.note, function(response) {
               debugger;
-              
+
               $state.go('notes.form', { noteId: response.data.note._id })
               });
           }
